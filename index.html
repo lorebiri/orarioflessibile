@@ -54,7 +54,15 @@
   <h1>🕒 Calcolo Orari di Lavoro</h1>
 
   <label for="orarioEntrata">Inserisci l'orario di entrata:</label><br />
-  <input type="time" id="orarioEntrata" /><br />
+  <input type="time" id="orarioEntrata" /><br>
+    <div style="margin-top: 1rem;">
+      <label>Recupero ore:</label><br>
+      <input type="number" id="recuperoOre" value="0" style="width: 60px;" />
+    </div>
+    <div style="margin-top: 0.5rem;">
+      <label>Recupero minuti:</label><br>
+      <input type="number" id="recuperoMinuti" value="0" style="width: 60px;" />
+    </div><br />
   <button onclick="calcolaOrari()">Calcola</button>
 
   <div class="box" id="output" style="display: none;">
@@ -62,6 +70,7 @@
     <div id="orari"></div>
     <div class="countdown" id="countdownUscita"></div>
     <div class="countdown" id="countdownBuono"></div>
+<div id="extraOrari" style="margin-top:1.5rem;"></div>
   </div>
 
   <script>
@@ -106,7 +115,10 @@
       const oraEntrata = new Date();
       oraEntrata.setHours(h, m, 0, 0);
 
-      const uscita = new Date(oraEntrata.getTime() + (7 * 60 + 12 + 30) * 60000); // 7h12 + 30min
+      const oreRecupero = parseInt(document.getElementById('recuperoOre').value) || 0;
+      const minRecupero = parseInt(document.getElementById('recuperoMinuti').value) || 0;
+      const recupero = oreRecupero * 60 + minRecupero;
+      const uscita = new Date(oraEntrata.getTime() + (7 * 60 + 12 + 30 + recupero) * 60000);
       const buono = new Date(oraEntrata.getTime() + (6 * 60 + 30) * 60000); // 6h30
 
       document.getElementById('output').style.display = 'block';
@@ -114,6 +126,19 @@
         ⏱ <strong>Orario di uscita:</strong> ${format(uscita)}<br>
         🍽 <strong>Buono pasto:</strong> ${format(buono)}
       `;
+
+      
+      // Mostra orari anticipati
+      const anticipata1 = new Date(uscita.getTime() - 60 * 60000);
+      const anticipata2 = new Date(uscita.getTime() - 120 * 60000);
+      const anticipata3 = new Date(uscita.getTime() - 180 * 60000);
+      document.getElementById('extraOrari').innerHTML = `
+        <div class="box">
+          <h3>🟦 Se vuoi uscire prima:</h3>
+          – Uscita -1h: <strong>${format(anticipata1)}</strong><br>
+          – Uscita -2h: <strong>${format(anticipata2)}</strong><br>
+          – Uscita -3h: <strong>${format(anticipata3)}</strong>
+        </div>`;
 
       const now = new Date();
       const tUscita = uscita.getTime() - now.getTime();
