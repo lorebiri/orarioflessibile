@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calcolo Orari Lavoro</title>
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1e3c72" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Calcolo Orari" />
+
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
+      color: white;
+      text-align: center;
+      padding: 2rem;
+      margin: 0;
+    }
+    input, button {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background-color: white;
+      color: #2a5298;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .box {
+      background-color: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1.5rem;
+    }
+    .countdown {
+      font-size: 1.5rem;
+      margin-top: 0.5rem;
+      color: #ffd54f;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🕒 Calcolo Orari di Lavoro</h1>
+
+  <label for="orarioEntrata">Inserisci l'orario di entrata:</label><br />
+  <input type="time" id="orarioEntrata" /><br />
+  <button onclick="calcolaOrari()">Calcola</button>
+
+  <div class="box" id="output" style="display: none;">
+    <h2>Risultati</h2>
+    <div id="orari"></div>
+    <div class="countdown" id="countdownUscita"></div>
+    <div class="countdown" id="countdownBuono"></div>
+  </div>
+
+  <script>
+    let countdownTimer;
+
+    function richiediPermessi() {
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    }
+
+    function notifica(titolo, messaggio) {
+      if (Notification.permission === 'granted') {
+        new Notification(titolo, { body: messaggio });
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    }
+
+    function format(date) {
+      return date.toTimeString().substring(0, 5);
+    }
+
+    function formatCountdown(ms) {
+      if (ms <= 0) return '00:00:00';
+      const s = Math.floor(ms / 1000);
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${h}:${m}:${ss}`;
+    }
+
+    function calcolaOrari() {
+      clearInterval(countdownTimer);
+      richiediPermessi();
+
+      const input = document.getElementById('orarioEntrata').value;
+      if (!input) return;
+
+      const [h, m] = input.split(':').map(Number);
+      const oraEntrata = new Date();
+      oraEntrata.setHours(h, m, 0, 0);
+
+      const uscita = new Date(oraEntrata.getTime() + (7 * 60 + 12 + 30) * 60000); // 7h12 + 30min
+      const buono = new Date(oraEntrata.getTime() + (6 * 60 + 30) * 60000); // 6h30
+
+      document.getElementById('output').style.display = 'block';
+      document.getElementById('orari').innerHTML = `
+        ⏱ <strong>Orario di uscita:</strong> ${format(uscita)}<br>
+        🍽 <strong>Buono pasto:</strong> ${format(buono)}
+      `;
+
+      const now = new Date();
+      const tUscita = uscita.getTime() - now.getTime();
+      const tBuono = buono.getTime() - now.getTime();
+
+      if (tBuono > 0) {
+        setTimeout(() => notifica('Buono pasto', 'Hai maturato il buono pasto!'), tBuono);
+      }
+      if (tUscita > 0) {
+        setTimeout(() => notifica('Orario di uscita', 'Hai completato 7h12 + pausa, puoi uscire!'), tUscita);
+      }
+
+      countdownTimer = setInterval(() => {
+        const adesso = new Date();
+        const r1 = uscita - adesso;
+        const r2 = buono - adesso;
+
+        document.getElementById('countdownUscita').innerText = `⏳ Uscita in: ${formatCountdown(r1)}`;
+        document.getElementById('countdownBuono').innerText = `⏳ Buono pasto in: ${formatCountdown(r2)}`;
+
+        if (r1 <= 0 && r2 <= 0) {
+          clearInterval(countdownTimer);
+        }
+      }, 1000);
+    }
+
+    window.onload = richiediPermessi;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js').catch(console.error);
+    }
+  </script>
+
+</body>
+</html>
